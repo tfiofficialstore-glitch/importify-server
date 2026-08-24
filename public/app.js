@@ -127,7 +127,7 @@ function renderTable(rows) {
 
   tbody.innerHTML = rows.map(r => `
     <tr>
-      <td><img class="prod-img" src="${escAttr(r.image || '')}" onerror="this.style.visibility='hidden'" /></td>
+      <td><img class="prod-img" src="${escAttr(r.image || '')}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.visibility='hidden'" /></td>
       <td class="sku-cell">${escHtml(r.sku || '-')}</td>
       <td>${escHtml(truncate(r.title || 'Untitled', 46))}</td>
       <td><span class="badge badge-shein">${escHtml(r.website || 'Shein')}</span></td>
@@ -145,7 +145,7 @@ async function viewRow(id) {
   const res = await api('/api/imports/' + id);
   const r = await res.json();
   document.getElementById('modalBody').innerHTML = `
-    ${r.image ? `<img src="${escAttr(r.image)}" onerror="this.style.display='none'" />` : ''}
+    ${r.image ? `<img src="${escAttr(r.image)}" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` : ''}
     <h2>${escHtml(r.title || 'Untitled')}</h2>
     <div class="modal-row"><span>SKU</span><span>${escHtml(r.sku || '-')}</span></div>
     <div class="modal-row"><span>Status</span><span>${escHtml(r.status)}</span></div>
@@ -284,7 +284,7 @@ function renderFinder(rows) {
       <div class="finder-card ${selectedIds.has(r.id) ? 'selected' : ''}" data-id="${r.id}">
         ${isSelectable ? `<input type="checkbox" class="finder-card-checkbox" ${checked} onclick="event.stopPropagation(); toggleSelect('${r.id}')" />` : ''}
         ${statusLabel ? `<span class="finder-card-status badge ${badgeClass}">${statusLabel}</span>` : ''}
-        <img class="finder-card-img" src="${escAttr(r.image || '')}" onerror="this.style.visibility='hidden'" />
+        <img class="finder-card-img" src="${escAttr(r.image || '')}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.visibility='hidden'" />
         <div class="finder-card-body">
           <div class="finder-card-title">${escHtml(truncate(r.title || 'Untitled', 60))}</div>
           <div class="finder-card-meta">
