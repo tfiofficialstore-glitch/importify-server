@@ -8,7 +8,7 @@ const DATA_PATH = process.env.DB_PATH || path.join(__dirname, 'data.json');
 
 function loadData() {
   if (!fs.existsSync(DATA_PATH)) {
-    const initial = { imports: [], catalog: [] };
+    const initial = { imports: [], catalog: [], syncs: [] };
     fs.writeFileSync(DATA_PATH, JSON.stringify(initial, null, 2));
     return initial;
   }
@@ -17,10 +17,11 @@ function loadData() {
     const parsed = JSON.parse(raw);
     if (!parsed.imports) parsed.imports = [];
     if (!parsed.catalog) parsed.catalog = [];
+    if (!parsed.syncs) parsed.syncs = [];
     return parsed;
   } catch (e) {
     console.error('[DB] Could not read data.json, starting fresh:', e.message);
-    return { imports: [], catalog: [] };
+    return { imports: [], catalog: [], syncs: [] };
   }
 }
 
