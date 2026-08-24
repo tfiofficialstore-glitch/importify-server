@@ -42,7 +42,7 @@ function showApp() {
   document.getElementById('app').style.display = 'flex';
   loadStats();
   loadImports();
-  loadFinder();
+  loadFinder(true);
 }
 
 // Auto-login if key already stored and valid
@@ -62,7 +62,7 @@ document.querySelectorAll('.menu-item').forEach(btn => {
     btn.classList.add('active');
     document.getElementById(btn.dataset.page).classList.add('active');
     if (btn.dataset.page === 'statsPage') loadStats();
-    if (btn.dataset.page === 'finderPage') loadFinder();
+    if (btn.dataset.page === 'finderPage') loadFinder(true);
   });
 });
 
@@ -230,16 +230,56 @@ let finderPage = 1;
 let finderTotalPages = 1;
 let finderSearch = '';
 let finderStatus = 'available';
+let finderCollectionUrl = ''; // '' = all collections
 let selectedIds = new Set();
 let finderPollInterval = null;
+const FINDER_PAGE_SIZE = 100;
 
-async function loadFinder() {
+async function loadCollectionsDropdown(preselectLatest) {
+  const select = document.getElementById('finderCollectionFilter');
+  try {
+    const res = await api('/api/catalog/collections');
+    const { data: collections } = await res.json();
+
+    const options = ['<option value="">All Collections</option>'];
+    collections.forEach((c, i) => {
+      const label = (c.title || c.url || 'Untitled').slice(0, 45);
+      options.push(`<option value="${escAttr(c.url || '')}">${i === 0 ? '🆕 ' : ''}${escHtml(label)}</option>`);
+    });
+    select.innerHTML = options.join('');
+
+    // On first load, default to the MOST RECENTLY synced collection so old
+    // syncs don't clutter the view — user can pick "All Collections" manually.
+    if (preselectLatest && collections.length > 0) {
+      finderCollectionUrl = collections[0].url || '';
+      select.value = finderCollectionUrl;
+    } else {
+      select.value = finderCollectionUrl;
+    }
+  } catch (e) {
+    select.innerHTML = '<option value="">All Collections</option>';
+  }
+}
+
+document.getElementById('finderCollectionFilter').addEventListener('change', (e) => {
+  finderCollectionUrl = e.target.value;
+  finderPage = 1;
+  selectedIds.clear();
+  loadFinder();
+});
+
+async function loadFinder(isFirstLoad) {
   const grid = document.getElementById('finderGrid');
   grid.innerHTML = '<div class="empty-row">Loading…</div>';
 
+  if (isFirstLoad) {
+    await loadCollectionsDropdown(true); // auto-select latest sync on first open
+  }
+
   const params = new URLSearchParams({
-    page: finderPage, limit: 24, search: finderSearch, status: finderStatus
+    page: finderPage, limit: FINDER_PAGE_SIZE, search: finderSearch, status: finderStatus
   });
+  if (finderCollectionUrl) params.set('collectionUrl', finderCollectionUrl);
 
   try {
     const res = await api('/api/catalog?' + params.toString());
