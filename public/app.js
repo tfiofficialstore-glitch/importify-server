@@ -249,18 +249,30 @@ async function loadBrowseMenu() {
       return;
     }
 
-    const topLevel = browseMenuData.filter(m => !m.parentName);
+    // Group items by their parentName. Items with NO parentName are real
+    // top-level links and render as flat buttons; everything else renders
+    // under a section label showing its parentName (Shein's top-level
+    // category buttons are often hover-triggers, not real <a> links, so
+    // most/all items usually end up in a named group rather than "flat").
+    const groups = new Map(); // parentName (or null) -> items[]
+    browseMenuData.forEach(item => {
+      const key = item.parentName || null;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(item);
+    });
+
     let html = '';
-    topLevel.forEach(top => {
-      html += `<button class="browse-menu-item" data-url="${escAttr(top.url)}" data-title="${escAttr(top.name)}">${escHtml(top.name)}</button>`;
-      const subs = browseMenuData.filter(m => m.parentName === top.name);
-      if (subs.length > 0) {
-        html += '<div class="browse-submenu">';
-        subs.forEach(sub => {
-          html += `<button class="browse-menu-item" data-url="${escAttr(sub.url)}" data-title="${escAttr(sub.name)}">${escHtml(sub.name)}</button>`;
-        });
-        html += '</div>';
-      }
+    (groups.get(null) || []).forEach(item => {
+      html += `<button class="browse-menu-item" data-url="${escAttr(item.url)}" data-title="${escAttr(item.name)}">${escHtml(item.name)}</button>`;
+    });
+    groups.forEach((groupItems, key) => {
+      if (key === null) return;
+      html += `<div class="browse-menu-group-label">${escHtml(key)}</div>`;
+      html += '<div class="browse-submenu">';
+      groupItems.forEach(item => {
+        html += `<button class="browse-menu-item" data-url="${escAttr(item.url)}" data-title="${escAttr(item.name)}">${escHtml(item.name)}</button>`;
+      });
+      html += '</div>';
     });
     menuEl.innerHTML = html;
 
