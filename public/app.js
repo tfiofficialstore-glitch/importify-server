@@ -119,10 +119,17 @@ async function loadImports() {
   }
 }
 
+function stockBadge(r) {
+  if (r.status !== 'success' || !r.product_url) return '<span class="sku-cell">—</span>';
+  if (r.stock_status === 'sold_out') return '<span class="badge badge-error">⛔ Sold Out' + (r.shopify_status === 'draft' ? ' (Drafted)' : '') + '</span>';
+  if (r.stock_status === 'in_stock') return '<span class="badge badge-success">✅ In Stock</span>';
+  return '<span class="sku-cell">Not checked yet</span>';
+}
+
 function renderTable(rows) {
   const tbody = document.getElementById('tableBody');
   if (!rows || rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-row">No products imported yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-row">No products imported yet.</td></tr>';
     return;
   }
 
@@ -133,13 +140,29 @@ function renderTable(rows) {
       <td>${escHtml(truncate(r.title || 'Untitled', 46))}</td>
       <td><span class="badge badge-shein">${escHtml(r.website || 'Shein')}</span></td>
       <td><span class="badge ${r.status === 'success' ? 'badge-success' : 'badge-error'}">${r.status === 'success' ? 'Success' : 'Failed'}</span></td>
+      <td>${stockBadge(r)}</td>
       <td>${formatDate(r.imported_at)}</td>
       <td>
         <button class="action-btn" title="View" onclick="viewRow('${r.id}')">👁</button>
+        ${r.product_url ? `<button class="action-btn" title="Recheck stock now" onclick="recheckStock('${r.id}', this)">🔄</button>` : ''}
         <button class="action-btn" title="Delete" onclick="deleteRow('${r.id}')">🗑</button>
       </td>
     </tr>
   `).join('');
+}
+
+async function recheckStock(id, btn) {
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = '⏳';
+  try {
+    await api('/api/imports/' + id + '/recheck', { method: 'POST' });
+    alert('Recheck queue mein daal diya — extension agle 1 minute mein isay check karega. Kuch der baad list refresh kar lein.');
+  } catch (e) {
+    alert('Recheck queue nahi ho saka.');
+  }
+  btn.disabled = false;
+  btn.textContent = original;
 }
 
 async function viewRow(id) {
