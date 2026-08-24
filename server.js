@@ -72,6 +72,9 @@ app.post('/api/imports', requireApiKey, (req, res) => {
     shopify_store: b.shopifyStore || null,
     shopify_link: b.shopifyLink || null,
     batch_id: b.batchId || null,
+    product_url: b.productUrl || null,
+    stock_status: 'unknown', // 'unknown' | 'in_stock' | 'sold_out'
+    last_checked_at: null,
     imported_at: b.importedAt || new Date().toISOString()
   };
 
@@ -109,6 +112,33 @@ app.get('/api/stats', requireApiKey, (req, res) => {
   });
 });
 
+// ============================================================
+// STOCK RECHECK — periodically (and on manual request) revisit
+// already-imported products' Shein pages to see if they've gone
+// sold out, and let the extension mark the Shopify listing as
+// Draft when that happens.
+// (Defined BEFORE /api/imports/:id so Express doesn't treat
+// "recheck-queue" as an :id value.)
+// ============================================================
+const RECHECK_INTERVAL_HOURS = 12;
+
+app.get('/api/imports/recheck-queue', requireApiKey, (req, res) => {
+  const limit = Math.min(10, Math.max(1, parseInt(req.query.limit, 10) || 3));
+  const data = loadData();
+  const cutoff = Date.now() - RECHECK_INTERVAL_HOURS * 60 * 60 * 1000;
+
+  const due = data.imports.filter(r =>
+    r.status === 'success' &&
+    r.product_url &&
+    r.shopify_product_id &&
+    (r.recheck_requested || !r.last_checked_at || new Date(r.last_checked_at).getTime() < cutoff)
+  );
+  // Explicitly-requested rechecks jump the queue
+  due.sort((a, b) => (b.recheck_requested ? 1 : 0) - (a.recheck_requested ? 1 : 0));
+
+  res.json({ data: due.slice(0, limit) });
+});
+
 app.get('/api/imports/:id', requireApiKey, (req, res) => {
   const data = loadData();
   const row = data.imports.find(r => r.id === req.params.id);
@@ -123,6 +153,35 @@ app.delete('/api/imports/:id', requireApiKey, (req, res) => {
   if (data.imports.length === before) return res.status(404).json({ error: 'Not found' });
   saveData(data);
   res.json({ deleted: true });
+});
+
+
+// Dashboard "Recheck Now" button — flags a specific import for the next poll
+app.post('/api/imports/:id/recheck', requireApiKey, (req, res) => {
+  const data = loadData();
+  const row = data.imports.find(r => r.id === req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  if (!row.product_url) return res.status(400).json({ error: 'This import has no saved Shein URL to recheck' });
+  row.recheck_requested = true;
+  saveData(data);
+  res.json({ queued: true });
+});
+
+// Extension reports back the result of a recheck
+app.patch('/api/imports/:id/stock', requireApiKey, (req, res) => {
+  const { stockStatus, message, draftedOnShopify } = req.body || {};
+  const data = loadData();
+  const row = data.imports.find(r => r.id === req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+
+  if (stockStatus && ['in_stock', 'sold_out', 'unknown'].includes(stockStatus)) row.stock_status = stockStatus;
+  if (message !== undefined) row.message = message;
+  if (draftedOnShopify) row.shopify_status = 'draft';
+  row.last_checked_at = new Date().toISOString();
+  row.recheck_requested = false;
+
+  saveData(data);
+  res.json(row);
 });
 
 app.get('/api/imports/export/csv', requireApiKey, (req, res) => {
