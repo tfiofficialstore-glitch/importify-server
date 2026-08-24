@@ -159,6 +159,7 @@ app.post('/api/catalog/bulk', requireApiKey, (req, res) => {
   }
 
   const data = loadData();
+  if (!data.syncs) data.syncs = [];
   const now = new Date().toISOString();
   let added = 0;
 
@@ -172,6 +173,8 @@ app.post('/api/catalog/bulk', requireApiKey, (req, res) => {
         existing.image = item.image || existing.image;
         existing.price = item.price != null ? String(item.price) : existing.price;
         existing.compare_price = item.compare_price != null ? String(item.compare_price) : existing.compare_price;
+        existing.source_collection = collectionTitle || collectionUrl || existing.source_collection;
+        existing.source_collection_url = collectionUrl || existing.source_collection_url;
         existing.updated_at = now;
       }
       continue;
@@ -187,6 +190,7 @@ app.post('/api/catalog/bulk', requireApiKey, (req, res) => {
       product_url: item.product_url,
       website: 'Shein',
       source_collection: collectionTitle || collectionUrl || null,
+      source_collection_url: collectionUrl || null,
       status: 'available',
       message: null,
       shopify_product_id: null,
@@ -198,17 +202,47 @@ app.post('/api/catalog/bulk', requireApiKey, (req, res) => {
     added++;
   }
 
+  // Record this sync event so the dashboard can tell which collection was
+  // synced most recently (used to auto-select the "latest sync" filter).
+  data.syncs.unshift({
+    id: crypto.randomUUID(),
+    url: collectionUrl || null,
+    title: collectionTitle || collectionUrl || 'Untitled sync',
+    itemCount: items.length,
+    syncedAt: now
+  });
+  data.syncs = data.syncs.slice(0, 200); // keep the log from growing forever
+
   saveData(data);
   res.status(201).json({ added, total: items.length });
 });
 
+// ---- List distinct synced collections, most recent first (for the
+// Product Finder "Collection" filter dropdown) ----
+app.get('/api/catalog/collections', requireApiKey, (req, res) => {
+  const data = loadData();
+  const syncs = data.syncs || [];
+  const seen = new Map(); // url -> { url, title, syncedAt }
+
+  for (const s of syncs) {
+    const key = s.url || s.title;
+    if (!seen.has(key)) {
+      seen.set(key, { url: s.url, title: s.title, syncedAt: s.syncedAt });
+    }
+  }
+
+  const collections = [...seen.values()].sort((a, b) => new Date(b.syncedAt) - new Date(a.syncedAt));
+  res.json({ data: collections });
+});
+
 app.get('/api/catalog', requireApiKey, (req, res) => {
-  const { search = '', status = 'available', page = '1', limit = '30' } = req.query;
+  const { search = '', status = 'available', page = '1', limit = '30', collectionUrl } = req.query;
   const data = loadData();
 
   let rows = data.catalog.filter(r =>
     matchesSearch(r, search) &&
-    (status === 'all' || r.status === status)
+    (status === 'all' || r.status === status) &&
+    (!collectionUrl || r.source_collection_url === collectionUrl)
   );
   rows = rows.slice().sort((a, b) => new Date(b.added_at) - new Date(a.added_at));
 
