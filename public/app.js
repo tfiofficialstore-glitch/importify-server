@@ -94,6 +94,67 @@ async function loadStats() {
     document.getElementById('statToday').textContent = s.today;
     document.getElementById('statWeek').textContent = s.last7Days;
   } catch (e) { /* handled in api() */ }
+
+  loadSpecialSection('superDealsRow', SUPER_DEALS_URL, 'Super Deals');
+  loadSpecialSection('trendsRow', TRENDS_URL, 'Trends');
+}
+
+// ============================================================
+// DASHBOARD SPECIAL SECTIONS — Super Deals & Trends preview rows
+// ============================================================
+const SUPER_DEALS_URL = 'https://www.shein.com/super-deals';
+const TRENDS_URL = 'https://www.shein.com/top-trend';
+
+async function loadSpecialSection(rowId, url, title) {
+  const row = document.getElementById(rowId);
+
+  // Queue a scrape if we don't already have fresh data for this URL
+  // (server skips re-queuing if it was synced recently).
+  try { await api('/api/browse', { method: 'POST', body: JSON.stringify({ url, title }) }); } catch (e) {}
+
+  let attempts = 0;
+  const maxAttempts = 15; // ~45s
+  const poll = async () => {
+    attempts++;
+    try {
+      const res = await api('/api/catalog?' + new URLSearchParams({ collectionUrl: url, status: 'all', limit: 6 }));
+      const json = await res.json();
+      if (json.data && json.data.length > 0) {
+        renderSpecialRow(row, json.data, url, title);
+        return;
+      }
+    } catch (e) { /* keep polling */ }
+
+    if (attempts < maxAttempts) {
+      setTimeout(poll, 3000);
+    } else {
+      row.innerHTML = '<div class="empty-row" style="padding:20px">Abhi data nahi mila. Extension browser mein khula hona chahiye.</div>';
+    }
+  };
+  poll();
+}
+
+function renderSpecialRow(row, items, url, title) {
+  row.innerHTML = items.map(r => `
+    <div class="special-card" onclick="goToBrowseFor('${escAttr(url)}', '${escAttr(title)}')">
+      <img class="special-card-img" src="${escAttr(r.image || '')}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.visibility='hidden'" />
+      <div class="special-card-body">
+        <div class="special-card-title">${escHtml(truncate(r.title || 'Untitled', 40))}</div>
+        <div>
+          <span class="special-card-price">${r.price ? '$' + escHtml(r.price) : ''}</span>
+          ${r.compare_price ? `<span class="special-card-compare">$${escHtml(r.compare_price)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function goToBrowseFor(url, title) {
+  document.querySelectorAll('.menu-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelector('.menu-item[data-page="browsePage"]').classList.add('active');
+  document.getElementById('browsePage').classList.add('active');
+  openBrowseCategory(url, title);
 }
 
 // ---------- List ----------
