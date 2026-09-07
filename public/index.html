@@ -126,6 +126,22 @@
         <div class="stat-card"><div class="stat-value" id="statToday">-</div><div class="stat-label">Today</div></div>
         <div class="stat-card"><div class="stat-value" id="statWeek">-</div><div class="stat-label">Last 7 Days</div></div>
       </div>
+
+      <div class="special-section">
+        <div class="special-section-header">
+          <span class="special-title">🔥 Super Deals</span>
+          <button class="btn btn-outline" onclick="goToBrowseFor(SUPER_DEALS_URL, 'Super Deals')">View All →</button>
+        </div>
+        <div class="special-row" id="superDealsRow"><div class="empty-row">Loading…</div></div>
+      </div>
+
+      <div class="special-section">
+        <div class="special-section-header">
+          <span class="special-title">📈 Trends</span>
+          <button class="btn btn-outline" onclick="goToBrowseFor(TRENDS_URL, 'Trends')">View All →</button>
+        </div>
+        <div class="special-row" id="trendsRow"><div class="empty-row">Loading…</div></div>
+      </div>
     </section>
 
     <!-- LIST PAGE -->
