@@ -6,7 +6,7 @@
 <title>TFI Import Console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -30,7 +30,7 @@
       <button class="menu-item" data-page="statsPage">Dashboard</button>
       <button class="menu-item" data-page="browsePage">Browse Shein</button>
       <button class="menu-item active" data-page="finderPage">Product Finder</button>
-      <button class="menu-item" data-page="listPage">Import List</button>
+      <button class="menu-item" data-page="listPage">My Products</button>
     </nav>
     <button id="logoutBtn" class="logout-btn">Lock</button>
   </aside>
@@ -149,17 +149,20 @@
     <!-- LIST PAGE -->
     <section id="listPage" class="page">
       <div class="page-header">
-        <h1>Import List</h1>
+        <h1>My Products</h1>
       </div>
 
       <div class="toolbar">
         <input id="searchInput" type="text" placeholder="Search products or SKU..." class="search-input" />
-        <select id="statusFilter" class="filter-select">
-          <option value="">All statuses</option>
-          <option value="success">Success</option>
-          <option value="error">Failed</option>
-        </select>
-        <button id="exportBtn" class="btn btn-outline">Export CSV</button>
+        <div class="dropdown-filter" id="statusDropdown">
+          <button class="dropdown-filter-btn" id="statusDropdownBtn">Status<span class="chev"></span></button>
+          <div class="dropdown-filter-panel" id="statusDropdownPanel">
+            <div class="dropdown-filter-option active" data-value="">All</div>
+            <div class="dropdown-filter-option" data-value="success">Imported</div>
+            <div class="dropdown-filter-option" data-value="error">Failed</div>
+          </div>
+        </div>
+        <button id="exportBtn" class="btn btn-primary">Export CSV</button>
       </div>
 
       <div class="table-wrap">
@@ -196,6 +199,24 @@
   <div class="modal">
     <button class="modal-close" id="modalCloseBtn">×</button>
     <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Edit product details modal -->
+<div id="editModal" class="modal-backdrop" style="display:none">
+  <div class="modal">
+    <h2>Edit product details</h2>
+    <div style="font-size:11.5px; color:var(--ink-dim); margin-bottom:14px;">
+      Changes are pushed to the linked Shopify product by the extension — this can take up to a minute.
+    </div>
+    <label style="font-size:12px; font-weight:600; display:block; margin-bottom:5px;">Title</label>
+    <input id="editTitleInput" type="text" class="search-input" style="width:100%; margin-bottom:12px;" />
+    <label style="font-size:12px; font-weight:600; display:block; margin-bottom:5px;">Vendor</label>
+    <input id="editVendorInput" type="text" class="search-input" style="width:100%; margin-bottom:18px;" />
+    <div style="display:flex; gap:8px; justify-content:flex-end;">
+      <button id="editCancelBtn" class="btn btn-outline">Cancel</button>
+      <button id="editSaveBtn" class="btn btn-primary">Save changes</button>
+    </div>
   </div>
 </div>
 
