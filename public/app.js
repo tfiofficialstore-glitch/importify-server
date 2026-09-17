@@ -180,6 +180,19 @@ async function loadImports() {
   }
 }
 
+const ICONS = {
+  edit: '<svg viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L6 17H3v-3L13.5 3.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  sync: '<svg viewBox="0 0 20 20" fill="none"><path d="M3.5 10a6.5 6.5 0 0111-4.6M16.5 10a6.5 6.5 0 01-11 4.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14 3.5v3h-3M6 16.5v-3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  push: '<svg viewBox="0 0 20 20" fill="none"><path d="M10 3v10M10 3l-4 4M10 3l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 14v1.5A1.5 1.5 0 005 17h10a1.5 1.5 0 001.5-1.5V14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  link: '<svg viewBox="0 0 20 20" fill="none"><path d="M8.5 5.5H5A1.5 1.5 0 003.5 7v7.5A1.5 1.5 0 005 16h7.5a1.5 1.5 0 001.5-1.5V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M11.5 3.5H16.5V8.5M16.5 3.5L9.5 10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  eye: '<svg viewBox="0 0 20 20" fill="none"><path d="M2 10s2.7-5 8-5 8 5 8 5-2.7 5-8 5-8-5-8-5z" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.4"/></svg>',
+  trash: '<svg viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4.5A1 1 0 019 3.5h2a1 1 0 011 1V6M6 6l.6 9.4A1.5 1.5 0 008.1 17h3.8a1.5 1.5 0 001.5-1.6L14 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+
+function iconBtn(icon, tooltip, onclick, extraAttrs) {
+  return `<button class="icon-btn" data-tooltip="${escAttr(tooltip)}" onclick="${onclick}" ${extraAttrs || ''}>${ICONS[icon]}</button>`;
+}
+
 function stockBadge(r) {
   if (r.status !== 'success' || !r.product_url) return '<span class="sku-cell">—</span>';
   if (r.stock_status === 'sold_out') return '<span class="badge badge-error">Sold out' + (r.shopify_status === 'draft' ? ' — drafted' : '') + '</span>';
@@ -194,37 +207,104 @@ function renderTable(rows) {
     return;
   }
 
-  tbody.innerHTML = rows.map(r => `
+  tbody.innerHTML = rows.map(r => {
+    let actions = '';
+    if (r.status === 'success') {
+      actions += iconBtn('eye', 'View details', `viewRow('${r.id}')`);
+      if (r.product_url) actions += iconBtn('sync', 'Sync inventory', `recheckStock('${r.id}', this)`);
+      if (r.shopify_link) actions += `<a class="icon-btn" data-tooltip="Open in Shopify" href="${escAttr(r.shopify_link)}" target="_blank">${ICONS.link}</a>`;
+      actions += iconBtn('edit', 'Edit product details', `openEditModal('${r.id}')`);
+    } else {
+      actions += iconBtn('eye', 'View details', `viewRow('${r.id}')`);
+      if (r.product_url) actions += iconBtn('push', 'Push to Shopify (retry)', `retryImport('${r.id}', this)`);
+    }
+    actions += iconBtn('trash', 'Delete', `deleteRow('${r.id}')`);
+
+    return `
     <tr>
       <td><img class="prod-img" src="${escAttr(r.image || '')}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.visibility='hidden'" /></td>
       <td class="sku-cell">${escHtml(r.sku || '-')}</td>
       <td>${escHtml(truncate(r.title || 'Untitled', 46))}</td>
       <td><span class="badge badge-shein">${escHtml(r.website || 'Shein')}</span></td>
-      <td><span class="badge ${r.status === 'success' ? 'badge-success' : 'badge-error'}">${r.status === 'success' ? 'Success' : 'Failed'}</span></td>
+      <td><span class="badge ${r.status === 'success' ? 'badge-success' : 'badge-error'}">${r.status === 'success' ? 'Imported' : 'Failed'}</span></td>
       <td>${stockBadge(r)}</td>
       <td>${formatDate(r.imported_at)}</td>
-      <td>
-        <button class="action-btn" title="View" onclick="viewRow('${r.id}')">View</button>
-        ${r.product_url ? `<button class="action-btn" title="Recheck stock now" onclick="recheckStock('${r.id}', this)">Recheck</button>` : ''}
-        <button class="action-btn" title="Delete" onclick="deleteRow('${r.id}')">Delete</button>
-      </td>
+      <td class="actions-cell">${actions}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 async function recheckStock(id, btn) {
   btn.disabled = true;
-  const original = btn.textContent;
-  btn.textContent = '⏳';
   try {
     await api('/api/imports/' + id + '/recheck', { method: 'POST' });
-    alert('Recheck queue mein daal diya — extension agle 1 minute mein isay check karega. Kuch der baad list refresh kar lein.');
+    toast('Queued — the extension will sync inventory within a minute.');
   } catch (e) {
-    alert('Recheck queue nahi ho saka.');
+    toast('Could not queue the sync.');
   }
   btn.disabled = false;
-  btn.textContent = original;
 }
+
+async function retryImport(id, btn) {
+  btn.disabled = true;
+  try {
+    await api('/api/imports/' + id + '/retry', { method: 'POST' });
+    toast('Queued — the extension will retry this import within a minute.');
+  } catch (e) {
+    toast('Could not queue the retry.');
+  }
+  btn.disabled = false;
+}
+
+function toast(msg) {
+  let el = document.getElementById('toastBox');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toastBox';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ---------- Edit product details ----------
+let editingRowId = null;
+
+async function openEditModal(id) {
+  const res = await api('/api/imports/' + id);
+  const r = await res.json();
+  editingRowId = id;
+  document.getElementById('editTitleInput').value = r.title || '';
+  document.getElementById('editVendorInput').value = r.vendor || '';
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+document.getElementById('editCancelBtn').addEventListener('click', () => {
+  document.getElementById('editModal').style.display = 'none';
+});
+document.getElementById('editModal').addEventListener('click', (e) => {
+  if (e.target.id === 'editModal') document.getElementById('editModal').style.display = 'none';
+});
+
+document.getElementById('editSaveBtn').addEventListener('click', async () => {
+  if (!editingRowId) return;
+  const title = document.getElementById('editTitleInput').value.trim();
+  const vendor = document.getElementById('editVendorInput').value.trim();
+  const btn = document.getElementById('editSaveBtn');
+  btn.disabled = true;
+  try {
+    await api('/api/imports/' + editingRowId + '/edit', { method: 'POST', body: JSON.stringify({ title, vendor }) });
+    document.getElementById('editModal').style.display = 'none';
+    toast('Queued — the extension will push these changes to Shopify within a minute.');
+  } catch (e) {
+    toast('Could not queue the edit.');
+  }
+  btn.disabled = false;
+});
 
 async function viewRow(id) {
   const res = await api('/api/imports/' + id);
@@ -242,7 +322,7 @@ async function viewRow(id) {
     <div class="modal-row"><span>Shopify Product ID</span><span>${escHtml(r.shopify_product_id || '-')}</span></div>
     <div class="modal-row"><span>Imported</span><span>${formatDate(r.imported_at)}</span></div>
     ${r.message ? `<div class="modal-row"><span>Message</span><span>${escHtml(r.message)}</span></div>` : ''}
-    ${r.shopify_link ? `<div style="margin-top:14px"><a href="${escAttr(r.shopify_link)}" target="_blank" style="color:#c99a4a">Open in Shopify</a></div>` : ''}
+    ${r.shopify_link ? `<div style="margin-top:14px"><a href="${escAttr(r.shopify_link)}" target="_blank" style="color:#2f6fed">Open in Shopify</a></div>` : ''}
   `;
   document.getElementById('detailModal').style.display = 'flex';
 }
@@ -272,10 +352,28 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
   }, 350);
 });
 
-document.getElementById('statusFilter').addEventListener('change', (e) => {
-  currentStatus = e.target.value;
-  currentPage = 1;
-  loadImports();
+// Custom "Status" dropdown (button + overlay panel) replacing the native select
+const statusDropdown = document.getElementById('statusDropdown');
+const statusDropdownBtn = document.getElementById('statusDropdownBtn');
+const statusDropdownPanel = document.getElementById('statusDropdownPanel');
+
+statusDropdownBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  statusDropdownPanel.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!statusDropdown.contains(e.target)) statusDropdownPanel.classList.remove('open');
+});
+statusDropdownPanel.querySelectorAll('.dropdown-filter-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    statusDropdownPanel.querySelectorAll('.dropdown-filter-option').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    statusDropdownBtn.innerHTML = (opt.dataset.value ? opt.textContent : 'Status') + '<span class="chev"></span>';
+    statusDropdownPanel.classList.remove('open');
+    currentStatus = opt.dataset.value;
+    currentPage = 1;
+    loadImports();
+  });
 });
 
 document.getElementById('prevPageBtn').addEventListener('click', () => {
