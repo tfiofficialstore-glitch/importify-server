@@ -182,8 +182,8 @@ async function loadImports() {
 
 function stockBadge(r) {
   if (r.status !== 'success' || !r.product_url) return '<span class="sku-cell">—</span>';
-  if (r.stock_status === 'sold_out') return '<span class="badge badge-error">⛔ Sold Out' + (r.shopify_status === 'draft' ? ' (Drafted)' : '') + '</span>';
-  if (r.stock_status === 'in_stock') return '<span class="badge badge-success">✅ In Stock</span>';
+  if (r.stock_status === 'sold_out') return '<span class="badge badge-error">Sold out' + (r.shopify_status === 'draft' ? ' — drafted' : '') + '</span>';
+  if (r.stock_status === 'in_stock') return '<span class="badge badge-success">In stock</span>';
   return '<span class="sku-cell">Not checked yet</span>';
 }
 
@@ -204,9 +204,9 @@ function renderTable(rows) {
       <td>${stockBadge(r)}</td>
       <td>${formatDate(r.imported_at)}</td>
       <td>
-        <button class="action-btn" title="View" onclick="viewRow('${r.id}')">👁</button>
-        ${r.product_url ? `<button class="action-btn" title="Recheck stock now" onclick="recheckStock('${r.id}', this)">🔄</button>` : ''}
-        <button class="action-btn" title="Delete" onclick="deleteRow('${r.id}')">🗑</button>
+        <button class="action-btn" title="View" onclick="viewRow('${r.id}')">View</button>
+        ${r.product_url ? `<button class="action-btn" title="Recheck stock now" onclick="recheckStock('${r.id}', this)">Recheck</button>` : ''}
+        <button class="action-btn" title="Delete" onclick="deleteRow('${r.id}')">Delete</button>
       </td>
     </tr>
   `).join('');
@@ -242,7 +242,7 @@ async function viewRow(id) {
     <div class="modal-row"><span>Shopify Product ID</span><span>${escHtml(r.shopify_product_id || '-')}</span></div>
     <div class="modal-row"><span>Imported</span><span>${formatDate(r.imported_at)}</span></div>
     ${r.message ? `<div class="modal-row"><span>Message</span><span>${escHtml(r.message)}</span></div>` : ''}
-    ${r.shopify_link ? `<div style="margin-top:14px"><a href="${escAttr(r.shopify_link)}" target="_blank" style="color:#c44dff">Open in Shopify →</a></div>` : ''}
+    ${r.shopify_link ? `<div style="margin-top:14px"><a href="${escAttr(r.shopify_link)}" target="_blank" style="color:#c99a4a">Open in Shopify</a></div>` : ''}
   `;
   document.getElementById('detailModal').style.display = 'flex';
 }
@@ -514,7 +514,7 @@ document.getElementById('browseImportSelectedBtn').addEventListener('click', asy
     browseSelectedIds.clear();
     loadBrowseGrid();
   } finally {
-    btn.innerHTML = '⬆ Import Selected (<span id="browseSelectedCount">0</span>)';
+    btn.innerHTML = 'Import selected (<span id="browseSelectedCount">0</span>)';
   }
 });
 
@@ -544,7 +544,7 @@ async function loadCollectionsDropdown(preselectLatest) {
     const options = ['<option value="">All Collections</option>'];
     collections.forEach((c, i) => {
       const label = (c.title || c.url || 'Untitled').slice(0, 45);
-      options.push(`<option value="${escAttr(c.url || '')}">${i === 0 ? '🆕 ' : ''}${escHtml(label)}</option>`);
+      options.push(`<option value="${escAttr(c.url || '')}">${escHtml(label)}${i === 0 ? ' (latest)' : ''}</option>`);
     });
     select.innerHTML = options.join('');
 
@@ -601,7 +601,7 @@ async function loadFinder(isFirstLoad) {
 }
 
 const STATUS_LABELS = {
-  available: '', queued: 'Queued', importing: 'Importing…', imported: 'Imported ✓', error: 'Failed'
+  available: '', queued: 'Queued', importing: 'Importing', imported: 'Imported', error: 'Failed'
 };
 const STATUS_BADGE_CLASS = {
   queued: 'badge-shein', importing: 'badge-shein', imported: 'badge-success', error: 'badge-error'
@@ -689,7 +689,7 @@ document.getElementById('importSelectedBtn').addEventListener('click', async () 
     selectedIds.clear();
     loadFinder();
   } finally {
-    btn.innerHTML = '⬆ Import Selected (<span id="selectedCount">0</span>)';
+    btn.innerHTML = 'Import selected (<span id="selectedCount">0</span>)';
   }
 });
 
