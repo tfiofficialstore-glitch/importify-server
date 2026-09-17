@@ -139,6 +139,15 @@ app.get('/api/imports/recheck-queue', requireApiKey, (req, res) => {
   res.json({ data: due.slice(0, limit) });
 });
 
+// Extension polls this to find pending "Edit product details" requests
+// (defined BEFORE /api/imports/:id for the same route-ordering reason as recheck-queue)
+app.get('/api/imports/edit-queue/pending', requireApiKey, (req, res) => {
+  const limit = Math.min(10, Math.max(1, parseInt(req.query.limit, 10) || 3));
+  const data = loadData();
+  const due = (data.imports || []).filter(r => r.edit_requested && r.shopify_product_id);
+  res.json({ data: due.slice(0, limit) });
+});
+
 app.get('/api/imports/:id', requireApiKey, (req, res) => {
   const data = loadData();
   const row = data.imports.find(r => r.id === req.params.id);
@@ -153,6 +162,84 @@ app.delete('/api/imports/:id', requireApiKey, (req, res) => {
   if (data.imports.length === before) return res.status(404).json({ error: 'Not found' });
   saveData(data);
   res.json({ deleted: true });
+});
+
+// "Push to Shopify" on a failed row — re-queues the product's Shein URL
+// through the same catalog pipeline the Product Finder already uses, so
+// the extension will re-scrape and re-attempt the import on its next poll.
+app.post('/api/imports/:id/retry', requireApiKey, (req, res) => {
+  const data = loadData();
+  const row = data.imports.find(r => r.id === req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  if (!row.product_url) return res.status(400).json({ error: 'This import has no saved Shein URL to retry from' });
+
+  let catalogItem = data.catalog.find(c => c.product_url === row.product_url);
+  const now = new Date().toISOString();
+  if (catalogItem) {
+    catalogItem.status = 'queued';
+    catalogItem.updated_at = now;
+  } else {
+    catalogItem = {
+      id: crypto.randomUUID(),
+      sku: row.sku || null,
+      title: row.title || null,
+      image: row.image || null,
+      price: row.price || null,
+      compare_price: null,
+      product_url: row.product_url,
+      website: 'Shein',
+      source_collection: 'Retry',
+      status: 'queued',
+      message: null,
+      shopify_product_id: null,
+      shopify_store: null,
+      shopify_link: null,
+      added_at: now,
+      updated_at: now
+    };
+    data.catalog.unshift(catalogItem);
+  }
+
+  saveData(data);
+  res.json({ queued: true });
+});
+
+// "Edit product details" — the dashboard sends new field values, and this
+// just flags them for the extension to apply next poll (only the extension
+// holds the Shopify credentials needed to push the update).
+app.post('/api/imports/:id/edit', requireApiKey, (req, res) => {
+  const { title, vendor } = req.body || {};
+  const data = loadData();
+  const row = data.imports.find(r => r.id === req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  if (!row.shopify_product_id) return res.status(400).json({ error: 'This import has no linked Shopify product' });
+
+  row.edit_requested = true;
+  row.edit_payload = {
+    title: title != null ? String(title).trim() : undefined,
+    vendor: vendor != null ? String(vendor).trim() : undefined
+  };
+  saveData(data);
+  res.json({ queued: true });
+});
+
+// Extension reports back after applying an edit
+app.patch('/api/imports/:id/edit-applied', requireApiKey, (req, res) => {
+  const { success, message } = req.body || {};
+  const data = loadData();
+  const row = data.imports.find(r => r.id === req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found' });
+
+  if (success && row.edit_payload) {
+    if (row.edit_payload.title) row.title = row.edit_payload.title;
+    if (row.edit_payload.vendor) row.vendor = row.edit_payload.vendor;
+  }
+  row.edit_requested = false;
+  row.edit_payload = null;
+  if (message) row.message = message;
+
+  saveData(data);
+  res.json(row);
 });
 
 
