@@ -322,6 +322,7 @@ app.post('/api/catalog/bulk', requireApiKey, (req, res) => {
         existing.tag = item.tag || existing.tag || null;
         existing.source_collection = collectionTitle || collectionUrl || existing.source_collection;
         existing.source_collection_url = collectionUrl || existing.source_collection_url;
+        if (item.full_product) existing.full_product = item.full_product;
         existing.updated_at = now;
       }
       continue;
@@ -336,6 +337,7 @@ app.post('/api/catalog/bulk', requireApiKey, (req, res) => {
       compare_price: item.compare_price != null ? String(item.compare_price) : null,
       tag: item.tag || null,
       product_url: item.product_url,
+      full_product: item.full_product || null,
       website: 'Shein',
       source_collection: collectionTitle || collectionUrl || null,
       source_collection_url: collectionUrl || null,
