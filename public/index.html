@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Import History</title>
+<title>TFI Import Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,10 +14,10 @@
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" class="login-screen">
   <div class="login-card">
-    <div class="login-logo">📦 Import History</div>
-    <p class="login-sub">Enter your API key to view your import history</p>
+    <div class="login-logo">Import Console</div>
+    <p class="login-sub">Enter your API key to continue</p>
     <input id="loginKeyInput" type="password" placeholder="API key" class="login-input" />
-    <button id="loginBtn" class="login-btn">Unlock Dashboard</button>
+    <button id="loginBtn" class="login-btn">Unlock</button>
     <div id="loginError" class="login-error"></div>
   </div>
 </div>
@@ -22,15 +25,14 @@
 <!-- APP -->
 <div id="app" class="app" style="display:none">
   <aside class="sidebar">
-    <div class="brand">📦 Import History</div>
+    <div class="brand">Import Console</div>
     <nav class="menu">
-      <div class="menu-label">MENU</div>
-      <button class="menu-item" data-page="statsPage">📊 Dashboard</button>
-      <button class="menu-item" data-page="browsePage">🧭 Browse Shein</button>
-      <button class="menu-item active" data-page="finderPage">🔎 Product Finder</button>
-      <button class="menu-item" data-page="listPage">🗂 Import List</button>
+      <button class="menu-item" data-page="statsPage">Dashboard</button>
+      <button class="menu-item" data-page="browsePage">Browse Shein</button>
+      <button class="menu-item active" data-page="finderPage">Product Finder</button>
+      <button class="menu-item" data-page="listPage">Import List</button>
     </nav>
-    <button id="logoutBtn" class="logout-btn">↩ Lock</button>
+    <button id="logoutBtn" class="logout-btn">Lock</button>
   </aside>
 
   <main class="main">
@@ -40,13 +42,13 @@
         <h1>Browse Shein</h1>
       </div>
       <div class="finder-hint">
-        Extension mein <strong>"📋 Sync Shein Menu"</strong> ek dafa dabayen (kisi bhi Shein page se) taake categories yahan aa jayen.
-        Phir bayen taraf se koi category click karein — uske products yahan load ho jayenge (agar pehli baar hai to ~1 minute lag sakta hai).
+        In the extension, click <strong>"Sync Shein Menu"</strong> once (from any Shein page) to populate categories here.
+        Then pick a category on the left — its products load here (first load can take up to a minute).
       </div>
 
       <div class="browse-layout">
         <aside class="browse-menu" id="browseMenu">
-          <div class="empty-row">Menu load ho raha hai…</div>
+          <div class="empty-row">Loading menu…</div>
         </aside>
 
         <div class="browse-content">
@@ -54,25 +56,25 @@
             <input id="browseMinPrice" type="number" placeholder="Min price" class="filter-select" style="width:100px" />
             <input id="browseMaxPrice" type="number" placeholder="Max price" class="filter-select" style="width:100px" />
             <select id="browseTagFilter" class="filter-select">
-              <option value="all">All Tags</option>
-              <option value="New">🆕 New</option>
-              <option value="Trending">🔥 Trending</option>
-              <option value="Flash Sale">⚡ Flash Sale</option>
-              <option value="Hot">♨️ Hot</option>
+              <option value="all">All tags</option>
+              <option value="New">New</option>
+              <option value="Trending">Trending</option>
+              <option value="Flash Sale">Flash Sale</option>
+              <option value="Hot">Hot</option>
             </select>
             <button id="browseApplyFiltersBtn" class="btn btn-outline">Apply</button>
-            <button id="browseSelectAllBtn" class="btn btn-outline">☑ Select All</button>
-            <button id="browseImportSelectedBtn" class="btn btn-primary" disabled>⬆ Import Selected (<span id="browseSelectedCount">0</span>)</button>
+            <button id="browseSelectAllBtn" class="btn btn-outline">Select all</button>
+            <button id="browseImportSelectedBtn" class="btn btn-primary" disabled>Import selected (<span id="browseSelectedCount">0</span>)</button>
           </div>
 
           <div class="finder-grid" id="browseGrid">
-            <div class="empty-row">Bayen taraf se ek category select karein.</div>
+            <div class="empty-row">Select a category on the left.</div>
           </div>
 
           <div class="pagination">
-            <button id="browsePrevBtn" class="btn btn-outline">← Prev</button>
+            <button id="browsePrevBtn" class="btn btn-outline">Prev</button>
             <span id="browsePageLabel"></span>
-            <button id="browseNextBtn" class="btn btn-outline">Next →</button>
+            <button id="browseNextBtn" class="btn btn-outline">Next</button>
           </div>
         </div>
       </div>
@@ -84,8 +86,8 @@
         <h1>Product Finder</h1>
       </div>
       <div class="finder-hint">
-        Shein pe koi collection/category page kholein → extension mein <strong>"Sync This Collection"</strong> dabayen →
-        products yahan dikhenge → select karke import karein. Import background mein automatically hoga, popup khula rakhne ki zaroorat nahi.
+        Open a collection/category page on Shein → click <strong>"Sync This Collection"</strong> in the extension →
+        products appear here → select and import. Import runs in the background — the popup doesn't need to stay open.
       </div>
 
       <div class="toolbar">
@@ -101,8 +103,8 @@
           <option value="error">Failed</option>
           <option value="all">All</option>
         </select>
-        <button id="selectAllBtn" class="btn btn-outline">☑ Select All</button>
-        <button id="importSelectedBtn" class="btn btn-primary" disabled>⬆ Import Selected (<span id="selectedCount">0</span>)</button>
+        <button id="selectAllBtn" class="btn btn-outline">Select all</button>
+        <button id="importSelectedBtn" class="btn btn-primary" disabled>Import selected (<span id="selectedCount">0</span>)</button>
       </div>
 
       <div class="finder-grid" id="finderGrid">
@@ -110,9 +112,9 @@
       </div>
 
       <div class="pagination">
-        <button id="finderPrevBtn" class="btn btn-outline">← Prev</button>
+        <button id="finderPrevBtn" class="btn btn-outline">Prev</button>
         <span id="finderPageLabel">Page 1</span>
-        <button id="finderNextBtn" class="btn btn-outline">Next →</button>
+        <button id="finderNextBtn" class="btn btn-outline">Next</button>
       </div>
     </section>
 
@@ -120,25 +122,25 @@
     <section id="statsPage" class="page">
       <h1>Dashboard</h1>
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-value" id="statTotal">-</div><div class="stat-label">Total Imports</div></div>
-        <div class="stat-card"><div class="stat-value" id="statSuccess">-</div><div class="stat-label">Successful</div></div>
-        <div class="stat-card"><div class="stat-value" id="statFailed">-</div><div class="stat-label">Failed</div></div>
-        <div class="stat-card"><div class="stat-value" id="statToday">-</div><div class="stat-label">Today</div></div>
-        <div class="stat-card"><div class="stat-value" id="statWeek">-</div><div class="stat-label">Last 7 Days</div></div>
+        <div class="stat-card stat-card--total"><div class="stat-value" id="statTotal">-</div><div class="stat-label">Total imports</div></div>
+        <div class="stat-card stat-card--success"><div class="stat-value" id="statSuccess">-</div><div class="stat-label">Successful</div></div>
+        <div class="stat-card stat-card--failed"><div class="stat-value" id="statFailed">-</div><div class="stat-label">Failed</div></div>
+        <div class="stat-card stat-card--today"><div class="stat-value" id="statToday">-</div><div class="stat-label">Today</div></div>
+        <div class="stat-card stat-card--week"><div class="stat-value" id="statWeek">-</div><div class="stat-label">Last 7 days</div></div>
       </div>
 
       <div class="special-section">
         <div class="special-section-header">
-          <span class="special-title">🔥 Super Deals</span>
-          <button class="btn btn-outline" onclick="goToBrowseFor(SUPER_DEALS_URL, 'Super Deals')">View All →</button>
+          <span class="special-title">Super Deals</span>
+          <button class="btn btn-outline" onclick="goToBrowseFor(SUPER_DEALS_URL, 'Super Deals')">View all</button>
         </div>
         <div class="special-row" id="superDealsRow"><div class="empty-row">Loading…</div></div>
       </div>
 
       <div class="special-section">
         <div class="special-section-header">
-          <span class="special-title">📈 Trends</span>
-          <button class="btn btn-outline" onclick="goToBrowseFor(TRENDS_URL, 'Trends')">View All →</button>
+          <span class="special-title">Trends</span>
+          <button class="btn btn-outline" onclick="goToBrowseFor(TRENDS_URL, 'Trends')">View all</button>
         </div>
         <div class="special-row" id="trendsRow"><div class="empty-row">Loading…</div></div>
       </div>
@@ -147,7 +149,7 @@
     <!-- LIST PAGE -->
     <section id="listPage" class="page">
       <div class="page-header">
-        <h1>Products Import List</h1>
+        <h1>Import List</h1>
       </div>
 
       <div class="toolbar">
@@ -157,7 +159,7 @@
           <option value="success">Success</option>
           <option value="error">Failed</option>
         </select>
-        <button id="exportBtn" class="btn btn-outline">⬇ Export CSV</button>
+        <button id="exportBtn" class="btn btn-outline">Export CSV</button>
       </div>
 
       <div class="table-wrap">
@@ -165,7 +167,7 @@
           <thead>
             <tr>
               <th>Picture</th>
-              <th>Sku</th>
+              <th>SKU</th>
               <th>Name</th>
               <th>Website</th>
               <th>Status</th>
@@ -181,9 +183,9 @@
       </div>
 
       <div class="pagination">
-        <button id="prevPageBtn" class="btn btn-outline">← Prev</button>
+        <button id="prevPageBtn" class="btn btn-outline">Prev</button>
         <span id="pageLabel">Page 1</span>
-        <button id="nextPageBtn" class="btn btn-outline">Next →</button>
+        <button id="nextPageBtn" class="btn btn-outline">Next</button>
       </div>
     </section>
   </main>
